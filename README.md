@@ -3,9 +3,9 @@ INSTRUCTIONS TO RUN:
 1) Create a folder named Invoices_info
 
 2) (A)
-To run the code without Mongo localhost connection:
-`python script_withoutdb.py --pdf pdf_name.pdf`
-eg: `python script_withoutdb.py --pdf HPYUV372.pdf`
+To run the code using Mongo localhost connection:
+`python script.py --pdf pdf_name.pdf`
+eg: `python script.py --pdf HPYUV372.pdf`
 
 OR
  
