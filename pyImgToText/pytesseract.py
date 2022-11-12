@@ -27,7 +27,7 @@ from packaging.version import Version
 from PIL import Image
 
 
-tesseract_cmd = 'tesseract'
+tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
 
 numpy_installed = find_loader('numpy') is not None
 if numpy_installed:
