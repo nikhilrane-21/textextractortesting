@@ -47,14 +47,15 @@ def getstartend(total_amount, text):
 
     total_amount=total_amount.strip()
 
-    #regex to match the first word in the line where total amount occurs and the first of the next line of total amount. These are the start and the end parameters respectively
+    # regex to match the first word in the line where total amount occurs and the first of the next line of total
+    # amount. These are the start and the end parameters respectively
     start_end=re.search('\n.*?'+f"\s{total_amount}"+'.*?\n\w+', text)
     if(start_end!=None):
         start=start_end.group().split(" ")[0].strip()
         end=start_end.group().split("\n")[-1].strip()
 
     else:
-        #If no regex matches
+        # If no regex matches
         print("start, end cannot be found")
     return "-1", "-1"
 
