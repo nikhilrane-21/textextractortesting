@@ -13,7 +13,13 @@ from typing import Tuple, Union
 from deskew import determine_skew
 from xlwt import Workbook
 import shutil
+import streamlit as st
 
+print_date=""
+print_number=""
+print_ammount=""
+print_buyer=""
+print_seller=""
 
 #function to rotate and remove the skew from the image
 def rotate(
@@ -61,6 +67,13 @@ def getstartend(total_amount, text):
 
 #function to get the desired fields when a template has been matched for the pdf
 def getinf(file):
+
+    global print_date
+    global print_number
+    global print_ammount
+    global print_buyer
+    global print_seller
+
     filename=os.path.join(os.getcwd(), "Invoices_info")
     filename=os.path.join(filename, file)
     dataframe1 = pd.read_excel(filename)
@@ -88,9 +101,9 @@ def getinf(file):
     img1.save('img2.png')
     img1.close()
     #reading text from the cropped image to get the Date of Invoice
-    text = str(image_to_string(
+    print_date = str(image_to_string(
         Image.open(r"img2.png"), lang='eng'))
-    print("Date of Invoice: ", text)
+    print("Date of Invoice: ", print_date)
 
     #reading the Invoice No after selecting the bounding box
     img1 = Image.open("page0.jpg")
@@ -100,9 +113,9 @@ def getinf(file):
     #                  ["y1"]+shifty, item["Invoice_No"]["x2"]+shiftw, item["Invoice_No"]["y2"]+shifth))
     img1.save('img2.png')
     img1.close()
-    text = str(image_to_string(
+    print_number = str(image_to_string(
         Image.open(r"img2.png"), lang='eng'))
-    print("invoice No ", text)
+    print("invoice No ", print_number)
 
     #reading the Total bill after selecting the bounding box
     img1 = Image.open("page0.jpg")
@@ -112,9 +125,9 @@ def getinf(file):
     #                  ["y1"]+shifty, item["Total Bill"]["x2"]+shiftw, item["Total Bill"]["y2"]+shifth))
     img1.save('img2.png')
     img1.close()
-    text = str(image_to_string(
+    print_ammount = str(image_to_string(
         Image.open(r"img2.png"), lang='eng'))
-    print("Total Bill: ", text)
+    print("Total Bill: ", print_ammount)
 
 
     #reading the Buyer Address after selecting the bounding box
@@ -126,9 +139,9 @@ def getinf(file):
     #                  ["y1"]+shifty, item["Buyer"]["x2"]+shiftw,item["Buyer"]["y2"]+shifth))
     img1.save('img2.png')
     img1.close()
-    text = str(image_to_string(
+    print_buyer = str(image_to_string(
         Image.open(r"img2.png"), lang='eng'))
-    print("Buyer: ", text)
+    print("Buyer: ", print_buyer)
 
 
     #reading the Seller Address  after selecting the bounding box
@@ -139,9 +152,9 @@ def getinf(file):
     #                  ["y1"]+shifty, item["Seller"]["x2"]+shiftw, item["Seller"]["y2"]+shifth))
     img1.save('img2.png')
     img1.close()
-    text = str(image_to_string(
+    print_seller = str(image_to_string(
         Image.open(r"img2.png"), lang='eng'))
-    print("Seller: ", text)
+    print("Seller: ", print_seller)
 
     return total_amount
 
@@ -207,34 +220,41 @@ shiftx=0
 shifty=0
 shiftw=0
 shifth=0
+found=0
+no_of_pages=0
+
+
+
+st.title("Data Extraction from Invoices")
+invoice_pdf = st.file_uploader("Upload a invoice")
+
+if invoice_pdf:
+    #converting pdf into images for every page of the pdf
+    images = convert_from_path(invoice_pdf.name)
+
+    #Extracting the image of each pages from the pdf
+    no_of_pages=len(images)
+    for i in range(len(images)):
+        images[i].save('page' + str(i) + '.jpg', 'JPEG')
+
+    found = 0 #variable to check if a matching template is found
+    image = cv2.imread('page0.jpg')
+    grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    angle = determine_skew(grayscale)  # determine the skew angle prsent in the original image
+    rotated = rotate(image, angle, (0, 0, 0))  #cancelling the skew in the original image and rorated is the new image after cancelling the skew in the original image
+    cv2.imwrite('page0.jpg', rotated)
+    matched_doc="" # to store the temaplate that has match with the template
+
+    image = Image.open('page0.jpg')
+    if st.button("View Invoice"):
+        # st.image('page0.jpg')
+        st.image(image)
+extract_button = st.button("Extract Data")
 
 print("Select boxes in the order:\n1.Keyword\n2.Date of Invoice\n3.Invoice No.\n4.Total Bill Amount\n5.Buyer Details\n6.Seller Details   ")
 
-#Extracting the file from the arguments passed in the command line
-ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--pdf", required=True, help="Path to the pdf")
-args = vars(ap.parse_args())
-
-#converting pdf into images for every page of the pdf
-images = convert_from_path(args["pdf"])
-
-#Extracting the image of each pages from the pdf
-no_of_pages=len(images)
-for i in range(len(images)):
-    images[i].save('page' + str(i) + '.jpg', 'JPEG')
-
-
-found = 0 #variable to check if a matching template is found
-image = cv2.imread('page0.jpg')
-grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-angle = determine_skew(grayscale)  # determine the skew angle prsent in the original image
-rotated = rotate(image, angle, (0, 0, 0))  #cancelling the skew in the original image and rorated is the new image after cancelling the skew in the original image
-cv2.imwrite('page0.jpg', rotated) 
-matched_doc="" # to store the temaplate that has match with the template
-
 #extarcting the text of the page1
-text = str(image_to_string(
-                Image.open(r"page0.jpg"), lang='eng'))
+text = str(image_to_string(Image.open(r"page0.jpg"), lang='eng'))
 
 #check if a matching template exists with teh same keyword and keyword bounding boxes
 for file in os.listdir(os.path.join(os.getcwd(), "Invoices_info")):
@@ -244,8 +264,6 @@ for file in os.listdir(os.path.join(os.getcwd(), "Invoices_info")):
     filename=os.path.join(filename, file)
     print(filename)
     dataframe1 = pd.read_excel(filename)
- 
-
 
     img3 = img1.crop((int(dataframe1['x1'].iloc[0]),int(dataframe1['y1'].iloc[0]) ,
                       int(dataframe1['x2'].iloc[0]),int(dataframe1['y2'].iloc[0])))
@@ -271,15 +289,15 @@ for file in os.listdir(os.path.join(os.getcwd(), "Invoices_info")):
             print("-1")
             flag=-1
             break
-        
+
 # pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe' # to make tesseract work, put in the exact path of tesseract
 
 #matching every word of the pdf to every keyword to find the shift and confirming by matching with seller key
-if(found==0 ):
+if found==0:
     for file in os.listdir(os.path.join(os.getcwd(), "Invoices_info")):
     # for document in db.invoices.find():
         img = Image.open('page0.jpg')
-        data = image_to_data(img, output_type='dict') 
+        data = image_to_data(img, output_type='dict')
         boxes = len(data['level'])
         filename=os.path.join(os.getcwd(), "Invoices_info")
         filename=os.path.join(filename, file)
@@ -287,19 +305,19 @@ if(found==0 ):
         key=file.split(".")[0]
 
         for i in range(boxes):
-            
+
             if data['text'][i].strip()!= ''.strip():
                 key_to_match=data['text'][i]
                 foundregex=re.search(r'[a-zA-Z]+', key_to_match)
 
                 #Checking only for valid strings
                 if(foundregex!=None):
-                    key_to_match=foundregex.group() 
-                
+                    key_to_match=foundregex.group()
+
                 #If keyword matches with a word in the pdf, get the x, y shift of teh keyword coordinates stored
-               
+
                 if((key_to_match)==key):
-                    
+
                     shiftx=data["left"][i]-dataframe1["x1"].iloc[0]
                     shifty=data["top"][i]- dataframe1["y1"].iloc[0]
                     shiftw=data["left"][i]-dataframe1["x1"].iloc[0]
@@ -307,7 +325,7 @@ if(found==0 ):
                     img1 = Image.open("page0.jpg")
                     # print(dataframe1["x1"].iloc[5]+shiftx,"  ", int(dataframe1["x1"].iloc[5]) +shiftx," ", int(dataframe1["x2"].iloc[5])+shifty," ", int(dataframe1["y1"].iloc[5])+shiftw, " ", int(dataframe1["y2"].iloc[5])+shifth)
                     img1 = img1.crop((( int(dataframe1["x1"].iloc[5]) +shiftx, int(dataframe1["y1"].iloc[5])+shifty, int(dataframe1["x2"].iloc[5])+shiftw, int(dataframe1["y2"].iloc[5])+shifth)) )
-                    
+
                     # img1 = img1.crop((document["Seller"]["x1"]+shiftx, document["Seller"]
                     #                  ["y1"]+shifty, document["Seller"]["x2"]+shiftw, document["Seller"]["y2"]+shifth))
                     img1.save('img2.png')
@@ -318,203 +336,214 @@ if(found==0 ):
                     if( text.split("\n")[0].strip()==dataframe1["x1"].iloc[8].strip()):
                         found=1
                         break
-        
-        
-        if(found==1):
+
+
+        if found==1:
             matched_doc=key
             total_amount=getinf(file)
             if(no_of_pages!=dataframe1['x1'].iloc[9]):
                 print("-1")
                 flag=-1 #flag indicates if nof pages in teh onboarded pdf and teh current pdf are same or not, if not sent for manual (-1)
                 break
-            
+
             break
 
 
-#When no template has been matched 
-if(found == 0 and flag!=-1):
+#When no template has been matched
+if found == 0 and flag!=-1:
     onboard=1
-    print("Onboarding")
-    image = cv2.imread("page0.jpg")
-    clone = image.copy()
+    st.header("No Template found for ths Invoice; Please Start the onboarding")
+    if st.button("Onboard"):
 
-    cv2.namedWindow("image", cv2.WINDOW_NORMAL) #resizing the output window
-    cv2.setMouseCallback("image", shape_selection) #to select rectangle by pressing and releasing mousebutton
-    curr = 1
-    while True:
-        cv2.imshow("image", image)
-        key = cv2.waitKey(1) & 0xFF
+        image = cv2.imread("page0.jpg")
+        clone = image.copy()
 
-        #When c is prssed on the keyword the opencv window closes
-        if key == ord("c"): 
-            break
+        cv2.namedWindow("image", cv2.WINDOW_NORMAL) #resizing the output window
+        cv2.setMouseCallback("image", shape_selection) #to select rectangle by pressing and releasing mousebutton
+        curr = 1
+        while True:
+            cv2.imshow("image", image)
+            key = cv2.waitKey(1) & 0xFF
 
-    #If valid selection is made by user while dragging the rectangle, i.e, atleast one rectangle has been selected successfully
-    if len(ref_point) >= 2:
-        img1 = Image.open("page0.jpg")
-        #cropping and saving only the rectangle portion of the image frmo where we have to extract the text
-        img3 = img1.crop(
-            (ref_point[0][0], ref_point[0][1], ref_point[1][0], ref_point[1][1]))
-        img3.save('img2.png')
-        img3.close()
+            #When c is prssed on the keyword the opencv window closes
+            if key == ord("c"):
+                break
 
-        image = Image.open('img2.png')
-        image.close()
+        #If valid selection is made by user while dragging the rectangle, i.e, atleast one rectangle has been selected successfully
+        if len(ref_point) >= 2:
+            img1 = Image.open("page0.jpg")
+            #cropping and saving only the rectangle portion of the image frmo where we have to extract the text
+            img3 = img1.crop(
+                (ref_point[0][0], ref_point[0][1], ref_point[1][0], ref_point[1][1]))
+            img3.save('img2.png')
+            img3.close()
 
-        #text variable contains the text in the bounding box selected
-        text = str(image_to_string(
+            image = Image.open('img2.png')
+            image.close()
+
+            #text variable contains the text in the bounding box selected
+            text = str(image_to_string(
+                Image.open(r"img2.png"), lang='eng'))
+
+            #getting the x and y coordinates of the keyword  from the pdf, for this the text read from the bounding box is matxhed with edvery word
+            #of the pdf and when the word matches we store its x, y coordinates as the keyword's coordinates. This is done to ensure that we dont consider the extra region of the image that ahs not
+            # text , we want a tight bound to x y coordinates for keyword
+            text=text.strip()
+            foundregex=re.search(r'[a-zA-Z]+', text)
+            if(foundregex!=None):
+                text=foundregex.group()
+
+            #onverting the whole pdf to text to match its every word
+            myimg=Image.open('page0.jpg')
+            data = image_to_data(myimg, output_type='dict')
+            boxes = len(data['level'])
+
+            for i in range(boxes):
+                key_to_match=data['text'][i].strip()
+                if(key_to_match!=""):
+                    foundregex=re.search(r'[a-zA-Z]+', key_to_match)
+                    if(foundregex!=None):
+                        key_to_match=foundregex.group()
+
+                    if key_to_match.strip() == text.strip():
+                        break
+
+            #inserting the new template in the db
+            # db.invoices.insert_one({"keyword":text})
+
+
+            keyword = text
+            name=keyword+'.xls'
+            # wb.save(name)
+            # db.invoices.update_one({"keyword": keyword}, {"$set": {"no_of_pages": no_of_pages}})
+            sheet1.write(10, 1, no_of_pages)
+            # db.invoices.update_one({"keyword": keyword}, {
+            # "$set": {"keyword_cordinates": {"x1":data["left"][i], "y1":data["top"][i], "x2": data["left"][i]+data["width"][i], "y2":data["top"][i]+data["height"][i]}}})
+            sheet1.write(1, 1, data["left"][i])
+            sheet1.write(1, 2, data["top"][i])
+            sheet1.write(1, 3, data["left"][i]+data["width"][i])
+            sheet1.write(1, 4, data["top"][i]+data["height"][i])
+
+            #extracting the date of invoice from the bounding box selected for it and storing its keyword coordinates in the database
+            img3 = img1.crop(
+            (ref_point[2][0], ref_point[2][1], ref_point[3][0], ref_point[3][1]))
+            # db.invoices.update_one({"keyword": keyword}, {
+            # "$set": {"Date": {"x1": ref_point[2][0], "y1": ref_point[2][1], "x2": ref_point[3][0], "y2": ref_point[3][1]}}})
+            sheet1.write(2, 1, ref_point[2][0])
+            sheet1.write(2, 2, ref_point[2][1])
+            sheet1.write(2, 3,  ref_point[3][0])
+            sheet1.write(2, 4,  ref_point[3][1])
+            img3.save('img2.png')
+            img3.close()
+            image = Image.open('img2.png')
+            image.close()
+            text = str(image_to_string(Image.open(r"img2.png"), lang='eng'))
+            print_date=text.strip()
+            st.write("Invoice Date",print_date)
+            #extracting the Invoice No. from the bounding box selected for it and storing its keyword coordinates in the database
+            img3 = img1.crop(ref_point[4][0], ref_point[4][1], ref_point[5][0], ref_point[5][1])
+            # db.invoices.update_one({"keyword": keyword}, {
+            # "$set": {"Invoice_No": {"x1": ref_point[4][0], "y1": ref_point[4][1], "x2": ref_point[5][0], "y2": ref_point[5][1]}}})
+            sheet1.write(3, 1, ref_point[4][0])
+            sheet1.write(3, 2, ref_point[4][1])
+            sheet1.write(3, 3,  ref_point[5][0])
+            sheet1.write(3, 4,  ref_point[5][1])
+            img3.save('img2.png')
+            img3.close()
+            image = Image.open('img2.png')
+            image.close()
+            text = str(image_to_string(Image.open(r"img2.png"), lang='eng'))
+            print_number=text.strip()
+            print("Invoice No: ", print_number)
+
+            #extracting the Total Bill from the bounding box selected for it and storing its keyword coordinates in the database
+            img3 = img1.crop(
+            (ref_point[6][0], ref_point[6][1], ref_point[7][0], ref_point[7][1]))
+            # db.invoices.update_one({"keyword": keyword}, {
+            # "$set": {"Total Bill": {"x1": ref_point[6][0], "y1": ref_point[6][1], "x2": ref_point[7][0], "y2": ref_point[7][1]}}})
+            sheet1.write(4, 1, ref_point[6][0])
+            sheet1.write(4, 2, ref_point[6][1])
+            sheet1.write(4, 3,  ref_point[7][0])
+            sheet1.write(4, 4,  ref_point[7][1])
+            img3.save('img2.png')
+            img3.close()
+            image = Image.open('img2.png')
+            image.close()
+            text = str(image_to_string(
             Image.open(r"img2.png"), lang='eng'))
+            print_ammount=text.strip()
+            print("Total Bill ", print_ammount)
+            total_amount=text
 
-        #getting the x and y coordinates of the keyword  from the pdf, for this the text read from the bounding box is matxhed with edvery word 
-        #of the pdf and when the word matches we store its x, y coordinates as the keyword's coordinates. This is done to ensure that we dont consider the extra region of the image that ahs not 
-        # text , we want a tight bound to x y coordinates for keyword
-        text=text.strip()
-        foundregex=re.search(r'[a-zA-Z]+', text)
-        if(foundregex!=None):
-            text=foundregex.group()
-        
-        #onverting the whole pdf to text to match its every word
-        myimg=Image.open('page0.jpg')
-        data = image_to_data(myimg, output_type='dict')
-        boxes = len(data['level'])
- 
-        for i in range(boxes):
-            key_to_match=data['text'][i].strip()
-            if(key_to_match!=""):
-                foundregex=re.search(r'[a-zA-Z]+', key_to_match)
-                if(foundregex!=None):
-                    key_to_match=foundregex.group()
-              
-                if key_to_match.strip() == text.strip():
-                    break
+            #Stroring the word before and after the total bill for part 3
+            wholetext = str(image_to_string(
+                Image.open(r"page0.jpg"), lang='eng'))
+            wholetext=wholetext.strip()
+            match_start, match_end=getstartend(total_amount, wholetext)
 
-        #inserting the new template in the db
-        # db.invoices.insert_one({"keyword":text})
-        
-        
-        keyword = text
-        name=keyword+'.xls'
-        # wb.save(name)
-        # db.invoices.update_one({"keyword": keyword}, {"$set": {"no_of_pages": no_of_pages}})
-        sheet1.write(10, 1, no_of_pages)
-        # db.invoices.update_one({"keyword": keyword}, {
-        # "$set": {"keyword_cordinates": {"x1":data["left"][i], "y1":data["top"][i], "x2": data["left"][i]+data["width"][i], "y2":data["top"][i]+data["height"][i]}}})
-        sheet1.write(1, 1, data["left"][i])
-        sheet1.write(1, 2, data["top"][i])
-        sheet1.write(1, 3, data["left"][i]+data["width"][i])
-        sheet1.write(1, 4, data["top"][i]+data["height"][i])
-     
-        #extracting the date of invoice from the bounding box selected for it and storing its keyword coordinates in the database
-        img3 = img1.crop(
-        (ref_point[2][0], ref_point[2][1], ref_point[3][0], ref_point[3][1]))
-        # db.invoices.update_one({"keyword": keyword}, {
-        # "$set": {"Date": {"x1": ref_point[2][0], "y1": ref_point[2][1], "x2": ref_point[3][0], "y2": ref_point[3][1]}}})
-        sheet1.write(2, 1, ref_point[2][0])
-        sheet1.write(2, 2, ref_point[2][1])
-        sheet1.write(2, 3,  ref_point[3][0])
-        sheet1.write(2, 4,  ref_point[3][1])
-        img3.save('img2.png')
-        img3.close()
-        image = Image.open('img2.png')
-        image.close()
-        text = str(image_to_string(
-        Image.open(r"img2.png"), lang='eng'))
-        text=text.strip()
-        print("Date of Invoice: ", text)
+            # db.invoices.update_one({"keyword": keyword}, {
+            #     "$set": {"match_start": match_start}})
+            sheet1.write(7,1,match_start)
+            # db.invoices.update_one({"keyword": keyword}, {
+            #     "$set": {"match_end": match_end}})
+            sheet1.write(8,1,match_end)
 
-        #extracting the Invoice No. from the bounding box selected for it and storing its keyword coordinates in the database
-        img3 = img1.crop(
-        (ref_point[4][0], ref_point[4][1], ref_point[5][0], ref_point[5][1]))
-        # db.invoices.update_one({"keyword": keyword}, {
-        # "$set": {"Invoice_No": {"x1": ref_point[4][0], "y1": ref_point[4][1], "x2": ref_point[5][0], "y2": ref_point[5][1]}}})
-        sheet1.write(3, 1, ref_point[4][0])
-        sheet1.write(3, 2, ref_point[4][1])
-        sheet1.write(3, 3,  ref_point[5][0])
-        sheet1.write(3, 4,  ref_point[5][1])
-        img3.save('img2.png')
-        img3.close()
-        image = Image.open('img2.png')
-        image.close()
-        text = str(image_to_string(
-        Image.open(r"img2.png"), lang='eng'))
-        text=text.strip()
-        print("Invoice No: ", text)
+            #extracting the Buyer Address from the bounding box selected for it and storing its keyword coordinates in the database
+            img3 = img1.crop(
+            (ref_point[8][0], ref_point[8][1], ref_point[9][0], ref_point[9][1]))
+            # db.invoices.update_one({"keyword": keyword}, {
+            # "$set": {"Buyer": {"x1": ref_point[8][0], "y1": ref_point[8][1], "x2": ref_point[9][0], "y2": ref_point[9][1]}}})
+            sheet1.write(5, 1, ref_point[8][0])
+            sheet1.write(5, 2, ref_point[8][1])
+            sheet1.write(5, 3,  ref_point[9][0])
+            sheet1.write(5, 4,  ref_point[9][1])
+            img3.save('img2.png')
+            img3.close()
+            image = Image.open('img2.png')
+            image.close()
+            text = str(image_to_string(
+            Image.open(r"img2.png"), lang='eng'))
+            print_buyer=text.strip()
+            print("Buyer: ", print_buyer)
+            #extracting the Seller Address from the bounding box selected for it and storing its keyword coordinates in the database
+            img3 = img1.crop(
+            (ref_point[10][0], ref_point[10][1], ref_point[11][0], ref_point[11][1]))
+            # db.invoices.update_one({"keyword": keyword}, {
+            # "$set": {"Seller": {"x1": ref_point[10][0], "y1": ref_point[10][1], "x2": ref_point[11][0], "y2": ref_point[11][1]}}})
+            sheet1.write(6, 1, ref_point[10][0])
+            sheet1.write(6, 2, ref_point[10][1])
+            sheet1.write(6, 3,  ref_point[11][0])
+            sheet1.write(6, 4,  ref_point[11][1])
+            img3.save('img2.png')
+            img3.close()
+            image = Image.open('img2.png')
+            image.close()
+            text = str(image_to_string(
+            Image.open(r"img2.png"), lang='eng'))
+            print_seller=text.strip()
+            sellerkey=print_seller.split("\n")[0]
+            # db.invoices.update_one({"keyword": keyword},{"$set": {"seller_key": sellerkey}})
+            sheet1.write(9,1,sellerkey)
+            print("jsbjdbjsbdjb")
+            print("Seller: ", print_seller)
+            wb.save(name)
+            dst_path=os.path.join(os.getcwd(), "Invoices_info")
+            dst_path=os.path.join(dst_path, name)
+            src_path=os.path.join(os.getcwd(), name)
+            shutil.move(src_path, dst_path)
 
-        #extracting the Total Bill from the bounding box selected for it and storing its keyword coordinates in the database
-        img3 = img1.crop(
-        (ref_point[6][0], ref_point[6][1], ref_point[7][0], ref_point[7][1]))
-        # db.invoices.update_one({"keyword": keyword}, {
-        # "$set": {"Total Bill": {"x1": ref_point[6][0], "y1": ref_point[6][1], "x2": ref_point[7][0], "y2": ref_point[7][1]}}})
-        sheet1.write(4, 1, ref_point[6][0])
-        sheet1.write(4, 2, ref_point[6][1])
-        sheet1.write(4, 3,  ref_point[7][0])
-        sheet1.write(4, 4,  ref_point[7][1])
-        img3.save('img2.png')
-        img3.close()
-        image = Image.open('img2.png')
-        image.close()
-        text = str(image_to_string(
-        Image.open(r"img2.png"), lang='eng'))
-        text=text.strip()
-        print("Total Bill ", text)
-        total_amount=text
+        cv2.destroyAllWindows()
 
-        #Stroring the word before and after the total bill for part 3
-        wholetext = str(image_to_string(
-            Image.open(r"page0.jpg"), lang='eng'))
-        wholetext=wholetext.strip()
-        match_start, match_end=getstartend(total_amount, wholetext)
-        
-        # db.invoices.update_one({"keyword": keyword}, {
-        #     "$set": {"match_start": match_start}})
-        sheet1.write(7,1,match_start)
-        # db.invoices.update_one({"keyword": keyword}, {
-        #     "$set": {"match_end": match_end}})
-        sheet1.write(8,1,match_end)
 
-        #extracting the Buyer Address from the bounding box selected for it and storing its keyword coordinates in the database
-        img3 = img1.crop(
-        (ref_point[8][0], ref_point[8][1], ref_point[9][0], ref_point[9][1]))
-        # db.invoices.update_one({"keyword": keyword}, {
-        # "$set": {"Buyer": {"x1": ref_point[8][0], "y1": ref_point[8][1], "x2": ref_point[9][0], "y2": ref_point[9][1]}}})
-        sheet1.write(5, 1, ref_point[8][0])
-        sheet1.write(5, 2, ref_point[8][1])
-        sheet1.write(5, 3,  ref_point[9][0])
-        sheet1.write(5, 4,  ref_point[9][1])
-        img3.save('img2.png')
-        img3.close()
-        image = Image.open('img2.png')
-        image.close()
-        text = str(image_to_string(
-        Image.open(r"img2.png"), lang='eng'))
-        text=text.strip()
-        print("Buyer: ", text)
+d = {
+            "Invoice Date:": print_date,
+            "Invoice Number:": print_number,
+            "Invoice Amount": print_ammount,
+            "Invoice Buyer": print_buyer,
+            "Invoice Seller": print_seller
+        }
 
-        #extracting the Seller Address from the bounding box selected for it and storing its keyword coordinates in the database
-        img3 = img1.crop(
-        (ref_point[10][0], ref_point[10][1], ref_point[11][0], ref_point[11][1]))
-        # db.invoices.update_one({"keyword": keyword}, {
-        # "$set": {"Seller": {"x1": ref_point[10][0], "y1": ref_point[10][1], "x2": ref_point[11][0], "y2": ref_point[11][1]}}})
-        sheet1.write(6, 1, ref_point[10][0])
-        sheet1.write(6, 2, ref_point[10][1])
-        sheet1.write(6, 3,  ref_point[11][0])
-        sheet1.write(6, 4,  ref_point[11][1])
-        img3.save('img2.png')
-        img3.close()
-        image = Image.open('img2.png')
-        image.close()
-        text = str(image_to_string(
-        Image.open(r"img2.png"), lang='eng'))
-        text=text.strip()
-        sellerkey=text.split("\n")[0]
-        # db.invoices.update_one({"keyword": keyword},{"$set": {"seller_key": sellerkey}})
-        sheet1.write(9,1,sellerkey)
-        print("Seller: ", text)
-        wb.save(name)
-        dst_path=os.path.join(os.getcwd(), "Invoices_info")
-        dst_path=os.path.join(dst_path, name)
-        src_path=os.path.join(os.getcwd(), name)
-        shutil.move(src_path, dst_path)
+print(d)
 
-    cv2.destroyAllWindows()
-
+if extract_button:
+    st.write(d)
