@@ -14,7 +14,7 @@ from deskew import determine_skew
 from xlwt import Workbook
 import shutil
 import streamlit as st
-
+import pdf2image
 print_date=""
 print_number=""
 print_ammount=""
@@ -223,15 +223,14 @@ shifth=0
 found=0
 no_of_pages=0
 
-ROOT_DIR = os.path.abspath(os.curdir)
-poppler_path_test = ROOT_DIR + r"/poppler-0.68.0/share/man/man1/"
+
 
 st.title("Data Extraction from Invoices")
-invoice_pdf = st.file_uploader("Upload a invoice")
+invoice_pdf = st.file_uploader("Upload a invoice", type=["jpg", "jpeg", "png", "pdf", "tiff"])
 
 if invoice_pdf:
     #converting pdf into images for every page of the pdf
-    images = convert_from_path(invoice_pdf.name, poppler_path = poppler_path_test)
+    images = pdf2image.convert_from_bytes(invoice_pdf.read())
 
     #Extracting the image of each pages from the pdf
     no_of_pages=len(images)
