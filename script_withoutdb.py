@@ -224,7 +224,7 @@ found=0
 no_of_pages=0
 
 ROOT_DIR = os.path.abspath(os.curdir)
-poppler_path_test = ROOT_DIR + r"./poppler-0.68.0/bin/"
+poppler_path_test = ROOT_DIR + r"/poppler-0.68.0/bin/"
 
 st.title("Data Extraction from Invoices")
 invoice_pdf = st.file_uploader("Upload a invoice")
