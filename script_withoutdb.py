@@ -234,7 +234,7 @@ invoice_pdf = st.file_uploader("Upload a invoice", type=["jpg", "jpeg", "png", "
 
 if invoice_pdf:
     #converting pdf into images for every page of the pdf
-    images = convert_from_path(invoice_pdf.read())
+    images = convert_from_path(invoice_pdf.name)
 
     #Extracting the image of each pages from the pdf
     no_of_pages=len(images)
