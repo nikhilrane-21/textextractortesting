@@ -1,0 +1,3 @@
+gdal
+cmake
+poppler
