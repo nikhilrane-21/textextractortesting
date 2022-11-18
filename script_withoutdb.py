@@ -223,14 +223,15 @@ shifth=0
 found=0
 no_of_pages=0
 
-
+ROOT_DIR = os.path.abspath(os.curdir)
+poppler_path_test = ROOT_DIR + r"./poppler-0.68.0/bin/"
 
 st.title("Data Extraction from Invoices")
 invoice_pdf = st.file_uploader("Upload a invoice")
 
 if invoice_pdf:
     #converting pdf into images for every page of the pdf
-    images = convert_from_path(invoice_pdf.name, poppler_path = './poppler-0.68.0/bin/')
+    images = convert_from_path(invoice_pdf.name, poppler_path = poppler_path_test)
 
     #Extracting the image of each pages from the pdf
     no_of_pages=len(images)
