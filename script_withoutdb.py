@@ -14,7 +14,8 @@ from deskew import determine_skew
 from xlwt import Workbook
 import shutil
 import streamlit as st
-import pdf2image
+
+
 print_date=""
 print_number=""
 print_ammount=""
@@ -230,7 +231,7 @@ invoice_pdf = st.file_uploader("Upload a invoice", type=["jpg", "jpeg", "png", "
 
 if invoice_pdf:
     #converting pdf into images for every page of the pdf
-    images = pdf2image.convert_from_bytes(invoice_pdf.read())
+    images = convert_from_path(invoice_pdf.read())
 
     #Extracting the image of each pages from the pdf
     no_of_pages=len(images)
