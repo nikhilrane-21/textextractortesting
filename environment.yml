@@ -3,6 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - poppler
+  - pip
   - pip:
     - altair==4.2.0
     - attrs==22.1.0
