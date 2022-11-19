@@ -2,6 +2,7 @@ name: textextractor
 channels:
   - conda-forge
 dependencies:
+  - certifi
   - poppler
   - pip
   - pip:
